@@ -11,10 +11,15 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import static com.wynnn.ipfilter.util.TestUtil.IP_CLIENT_1;
+import static com.wynnn.ipfilter.util.TestUtil.IP_HEADER_UNKNOWN;
+import static com.wynnn.ipfilter.util.TestUtil.IP_LOOPBACK;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -26,10 +31,6 @@ class IpAuthenticationControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    final String CLIENT_HEADER_IP = "1.1.1.1";
-    final String UNKNOWN = "UNKNOWN";
-    final String LOOPBACK = "127.0.0.1";
-
     @Test
     void test_authenticateClientIp_blankHeaderValue() throws Exception {
         given(ipAuthService.hasAuth(anyString())).willReturn(true);
@@ -38,33 +39,33 @@ class IpAuthenticationControllerTest {
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").exists())
-                .andExpect(jsonPath("$.clientIp").value(LOOPBACK));
+                .andExpect(jsonPath("$.clientIp").value(IP_LOOPBACK));
     }
 
     @Test
     void test_authenticateClientIp_has_x_forwarded_for_header() throws Exception {
         given(ipAuthService.hasAuth(anyString())).willReturn(true);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", CLIENT_HEADER_IP))
+        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", IP_CLIENT_1))
                 .andDo(print())
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").exists())
-                .andExpect(jsonPath("$.clientIp").value(CLIENT_HEADER_IP));
+                .andExpect(jsonPath("$.clientIp").value(IP_CLIENT_1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", "")) // blank case
                 .andDo(print())
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").exists())
-                .andExpect(jsonPath("$.clientIp").value(LOOPBACK));
+                .andExpect(jsonPath("$.clientIp").value(IP_LOOPBACK));
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", UNKNOWN))
+        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", IP_HEADER_UNKNOWN))
                 .andDo(print())
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").exists())
-                .andExpect(jsonPath("$.clientIp").value(LOOPBACK));
+                .andExpect(jsonPath("$.clientIp").value(IP_LOOPBACK));
     }
 
     @Test
@@ -73,26 +74,26 @@ class IpAuthenticationControllerTest {
         given(ipAuthService.hasAuth(anyString())).willReturn(true);
 
         for (String clientIpHeaderName : otherHeaderNames) {
-            mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header(clientIpHeaderName, CLIENT_HEADER_IP))
+            mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header(clientIpHeaderName, IP_CLIENT_1))
                     .andDo(print())
                     .andExpect(status().is(HttpStatus.OK.value()))
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                     .andExpect(jsonPath("$.resultMessage").exists())
-                    .andExpect(jsonPath("$.clientIp").value(CLIENT_HEADER_IP));
+                    .andExpect(jsonPath("$.clientIp").value(IP_CLIENT_1));
 
             mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header(clientIpHeaderName, "")) // blank case
                     .andDo(print())
                     .andExpect(status().is(HttpStatus.OK.value()))
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                     .andExpect(jsonPath("$.resultMessage").exists())
-                    .andExpect(jsonPath("$.clientIp").value(LOOPBACK));
+                    .andExpect(jsonPath("$.clientIp").value(IP_LOOPBACK));
 
-            mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header(clientIpHeaderName, UNKNOWN))
+            mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header(clientIpHeaderName, IP_HEADER_UNKNOWN))
                     .andDo(print())
                     .andExpect(status().is(HttpStatus.OK.value()))
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                     .andExpect(jsonPath("$.resultMessage").exists())
-                    .andExpect(jsonPath("$.clientIp").value(LOOPBACK));
+                    .andExpect(jsonPath("$.clientIp").value(IP_LOOPBACK));
         }
     }
 
@@ -100,23 +101,23 @@ class IpAuthenticationControllerTest {
     void test_authenticateClientIp_if_allow() throws Exception {
         given(ipAuthService.hasAuth(anyString())).willReturn(true);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", CLIENT_HEADER_IP))
+        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", IP_CLIENT_1))
                 .andDo(print())
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").value("Allow"))
-                .andExpect(jsonPath("$.clientIp").value(CLIENT_HEADER_IP));
+                .andExpect(jsonPath("$.clientIp").value(IP_CLIENT_1));
     }
 
     @Test
     void test_authenticateClientIp_if_deny() throws Exception {
         given(ipAuthService.hasAuth(anyString())).willReturn(false);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", CLIENT_HEADER_IP))
+        mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", IP_CLIENT_1))
                 .andDo(print())
                 .andExpect(status().is(HttpStatus.OK.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").value("Deny"))
-                .andExpect(jsonPath("$.clientIp").value(CLIENT_HEADER_IP));
+                .andExpect(jsonPath("$.clientIp").value(IP_CLIENT_1));
     }
 }
