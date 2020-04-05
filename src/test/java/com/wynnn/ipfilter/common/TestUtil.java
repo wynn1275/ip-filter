@@ -1,11 +1,11 @@
-package com.wynnn.ipfilter.util;
+package com.wynnn.ipfilter.common;
 
 import com.wynnn.ipfilter.config.IpFilterConfiguration;
+import com.wynnn.ipfilter.model.Ipv4Subnet;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.net.util.SubnetUtils;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.TreeMap;
 
 @Slf4j
 public class TestUtil {
@@ -44,7 +44,7 @@ public class TestUtil {
     public static final String IP_HEADER_UNKNOWN = "UNKNOWN";
     public static final String IP_LOOPBACK = "127.0.0.1";
 
-    public static List<SubnetUtils> createDummyDenyList() {
+    public static TreeMap<Long, Ipv4Subnet> createDummyDenyRule() {
         IpFilterConfiguration ipFilterConfiguration = new IpFilterConfiguration();
         ipFilterConfiguration.setDeny(Arrays.asList(TEST_FILTER_DENY_LIST));
         return ipFilterConfiguration.getDeny();

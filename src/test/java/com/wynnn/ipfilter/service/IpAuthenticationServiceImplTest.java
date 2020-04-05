@@ -1,8 +1,8 @@
 package com.wynnn.ipfilter.service;
 
+import com.wynnn.ipfilter.common.TestUtil;
 import com.wynnn.ipfilter.config.IpFilterConfiguration;
-import com.wynnn.ipfilter.util.TestUtil;
-import org.apache.commons.net.util.SubnetUtils;
+import com.wynnn.ipfilter.model.Ipv4Subnet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -24,11 +24,10 @@ class IpAuthenticationServiceImplTest {
 
     @Mock
     private IpFilterConfiguration ipFilterConfiguration;
-
     @InjectMocks
     private IpAuthenticationServiceImpl ipAuthenticationService;
 
-    private final List<SubnetUtils> DENY_RULES = TestUtil.createDummyDenyList();
+    private final TreeMap<Long, Ipv4Subnet> DENY_RULES = TestUtil.createDummyDenyRule();
 
     @BeforeEach
     void setUp() {

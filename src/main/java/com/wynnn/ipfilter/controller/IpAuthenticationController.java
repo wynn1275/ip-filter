@@ -2,6 +2,7 @@ package com.wynnn.ipfilter.controller;
 
 import com.wynnn.ipfilter.model.ResponseData;
 import com.wynnn.ipfilter.service.IpAuthenticationService;
+import com.wynnn.ipfilter.utils.IpUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -25,8 +26,9 @@ public class IpAuthenticationController {
     public ResponseEntity<ResponseData> authenticateClientIp(HttpServletRequest request) {
         return Optional.ofNullable(getClientIp(request))
                 .filter(StringUtils::isNotBlank)
-                .map(clientIp -> ipAuthService.hasAuth(clientIp) ?
-                        ResponseEntity.ok(ResponseData.authorized(clientIp))
+                .filter(IpUtils::isValidIpFormat)
+                .map(clientIp -> ipAuthService.hasAuth(clientIp)
+                        ? ResponseEntity.ok(ResponseData.authorized(clientIp))
                         : ResponseEntity.ok(ResponseData.unauthorized(clientIp)))
                 .orElse(ResponseEntity.badRequest().body(ResponseData.unauthorized("Invalid IP")));
     }
