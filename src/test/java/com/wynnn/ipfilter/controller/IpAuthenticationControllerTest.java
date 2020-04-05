@@ -11,9 +11,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import static com.wynnn.ipfilter.util.TestUtil.IP_CLIENT_1;
-import static com.wynnn.ipfilter.util.TestUtil.IP_HEADER_UNKNOWN;
-import static com.wynnn.ipfilter.util.TestUtil.IP_LOOPBACK;
+import static com.wynnn.ipfilter.common.TestUtil.IP_CLIENT_1;
+import static com.wynnn.ipfilter.common.TestUtil.IP_HEADER_UNKNOWN;
+import static com.wynnn.ipfilter.common.TestUtil.IP_LOOPBACK;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;

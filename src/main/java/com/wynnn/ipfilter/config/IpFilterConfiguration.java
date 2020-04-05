@@ -1,15 +1,16 @@
 package com.wynnn.ipfilter.config;
 
+import com.wynnn.ipfilter.model.Ipv4Subnet;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.net.util.SubnetUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 @Configuration
 @ConfigurationProperties(prefix = "ip-filter")
@@ -17,22 +18,37 @@ import java.util.regex.Pattern;
 @Slf4j
 public class IpFilterConfiguration {
 
-    private List<SubnetUtils> deny;
+    private TreeMap<Long, Ipv4Subnet> deny;
 
-    private static final Pattern CIDR_PATTERN = Pattern.compile("(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,3})");
-    private static final String SUBNET_32BIT = "255.255.255.255";
+    public void setDeny(List<String> deny) {
+        this.deny = Optional.ofNullable(deny)
+                .filter(denies -> denies.size() > 0)
+                .map(this::parseSubnet)
+                .map(this::removeNestedSubnet)
+                .orElse(new TreeMap<>());
+        log.debug("> completed to set deny={}", this.deny);
+    }
 
-    public void setDeny(List<String> denyIps) {
-        deny = new ArrayList<>();
+    private TreeSet<Ipv4Subnet> parseSubnet(List<String> denyIps) {
+        TreeSet<Ipv4Subnet> treeSet = new TreeSet<>();
         for (String denyIp : denyIps) {
-            log.debug("> denyIpStr={}", denyIp);
             try {
-                SubnetUtils validIpWithCidr = CIDR_PATTERN.matcher(denyIp).matches() ? new SubnetUtils(denyIp) : new SubnetUtils(denyIp, SUBNET_32BIT);
-                validIpWithCidr.setInclusiveHostCount(true);
-                deny.add(validIpWithCidr);
-            } catch (IllegalArgumentException e) {
-                log.info("> cannot parse IP cause invalid format, IP={}", denyIp, e);
+                treeSet.add(new Ipv4Subnet(denyIp));
+            } catch (Exception e) {
+                log.info("> cannot parse IP because invalid format, IP={}", denyIp, e);
             }
         }
+        return treeSet;
+    }
+
+    private TreeMap<Long, Ipv4Subnet> removeNestedSubnet(TreeSet<Ipv4Subnet> denySubnet) {
+        TreeMap<Long, Ipv4Subnet> denyRules = new TreeMap<>();
+        for (Ipv4Subnet subnet : denySubnet) {
+            Map.Entry<Long, Ipv4Subnet> entry = denyRules.floorEntry(subnet.getIpLong());
+            if (entry == null || !entry.getValue().getSubnet().getInfo().isInRange(subnet.getSubnet().getInfo().getAddress())) {
+                denyRules.put(subnet.getIpLong(), subnet);
+            }
+        }
+        return denyRules;
     }
 }
