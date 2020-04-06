@@ -36,6 +36,11 @@ public class Ipv4Subnet implements Comparable<Ipv4Subnet> {
         cidr = Integer.parseInt(cidrStr[cidrStr.length - 1]);
     }
 
+    public boolean isNestedSubnet(Ipv4Subnet other) {
+        return IpUtils.ipToLong(subnet.getInfo().getLowAddress()) <= IpUtils.ipToLong(other.getSubnet().getInfo().getLowAddress())
+                && IpUtils.ipToLong(subnet.getInfo().getHighAddress()) >= IpUtils.ipToLong(other.getSubnet().getInfo().getHighAddress());
+    }
+
     @Override
     public int compareTo(Ipv4Subnet other) {
         if (ipLong == other.getIpLong()) { // if the first IPs in the subnet are the same, then sort by CIDR (in small order)

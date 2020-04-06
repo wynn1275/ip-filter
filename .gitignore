@@ -3,6 +3,7 @@
 
 # Log file
 *.log
+/logs/
 
 # BlueJ files
 *.ctxt
@@ -48,3 +49,6 @@ hs_err_pid*
 /dist/
 /nbdist/
 /.nb-gradle/
+
+# test file
+random-ip-denies*.yml
