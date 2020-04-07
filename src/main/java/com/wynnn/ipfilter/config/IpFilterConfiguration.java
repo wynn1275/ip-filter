@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 @Configuration
 @ConfigurationProperties(prefix = "ip-filter")
@@ -23,30 +22,30 @@ public class IpFilterConfiguration {
     public void setDeny(List<String> deny) {
         this.deny = Optional.ofNullable(deny)
                 .filter(denies -> denies.size() > 0)
-                .map(this::parseSubnet)
-                .map(this::removeNestedSubnet)
+                .map(this::parseNestedSubnet)
                 .orElse(new TreeMap<>());
-        log.debug("> completed to set deny={}", this.deny);
+        log.info("> completed to set deny={}", this.deny.size());
     }
 
-    private TreeSet<Ipv4Subnet> parseSubnet(List<String> denyIps) {
-        TreeSet<Ipv4Subnet> treeSet = new TreeSet<>();
+    private TreeMap<Long, Ipv4Subnet> parseNestedSubnet(List<String> denyIps) {
+        TreeMap<Long, Ipv4Subnet> denyRules = new TreeMap<>();
         for (String denyIp : denyIps) {
             try {
-                treeSet.add(new Ipv4Subnet(denyIp));
+                Ipv4Subnet subnet = new Ipv4Subnet(denyIp);
+                Map.Entry<Long, Ipv4Subnet> floorEntry = denyRules.floorEntry(subnet.getStartIpLong());
+                if (floorEntry == null) {
+                    denyRules.put(subnet.getStartIpLong(), subnet);
+                } else if (floorEntry.getValue().isNestedSubnet(subnet)) { // if new subnet is nested then skip
+                    continue;
+                } else {
+                    if (floorEntry.getKey() == subnet.getStartIpLong()) {
+                        denyRules.replace(subnet.getStartIpLong(), subnet);
+                    } else {
+                        denyRules.put(subnet.getStartIpLong(), subnet);
+                    }
+                }
             } catch (Exception e) {
-                log.info("> cannot parse IP because invalid format, IP={}", denyIp, e);
-            }
-        }
-        return treeSet;
-    }
-
-    private TreeMap<Long, Ipv4Subnet> removeNestedSubnet(TreeSet<Ipv4Subnet> denySubnet) {
-        TreeMap<Long, Ipv4Subnet> denyRules = new TreeMap<>();
-        for (Ipv4Subnet subnet : denySubnet) {
-            Map.Entry<Long, Ipv4Subnet> entry = denyRules.floorEntry(subnet.getIpLong());
-            if (entry == null || !entry.getValue().getSubnet().getInfo().isInRange(subnet.getSubnet().getInfo().getAddress())) {
-                denyRules.put(subnet.getIpLong(), subnet);
+                log.info("> exception when parse IP={}", denyIp, e);
             }
         }
         return denyRules;

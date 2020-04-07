@@ -23,7 +23,6 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
 public class IpFilterConfigurationTest {
@@ -58,7 +57,7 @@ public class IpFilterConfigurationTest {
         assertAll("if denyRule has only ipv4 and not include cidr notation, then set 32 bit mask",
                 () -> assertEquals(1, deny.size()),
                 () -> assertNotNull(deny.get(IpUtils.ipToLong(denyRule))),
-                () -> assertTrue(deny.get(IpUtils.ipToLong(denyRule)).getSubnet().getInfo().getCidrSignature().endsWith("/32")));
+                () -> assertEquals(32, deny.get(IpUtils.ipToLong(denyRule)).getCidr()));
     }
 
     @Test
@@ -68,9 +67,49 @@ public class IpFilterConfigurationTest {
         TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
         assertAll("test if deny rule is 10.10.10.11/24, then denyIPs must be 10.10.10.0 ~ 10.10.10.255",
                 () -> assertEquals(1, deny.size()),
-                () -> assertEquals("10.10.10.0/24", deny.firstEntry().getValue().getSubnet().getInfo().getCidrSignature()),
-                () -> assertEquals("10.10.10.0", deny.firstEntry().getValue().getSubnet().getInfo().getLowAddress()),
-                () -> assertEquals("10.10.10.255", deny.firstEntry().getValue().getSubnet().getInfo().getHighAddress()));
+                () -> assertEquals(24, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("10.10.10.11"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.10.10.0"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.10.10.255"), deny.firstEntry().getValue().getEndIpLong()));
+    }
+
+    @Test
+    void test_setDeny_set_valid_if_ip_is_all() {
+        String denyRule = "0.0.0.0/0"; // 0.0.0.0 ~ 255.255.255.255
+        ipFilterConfiguration.setDeny(Collections.singletonList(denyRule));
+        TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
+        assertAll("test if deny rule is 0.0.0.0/0 then denyIPs must be 0.0.0.0 ~ 255.255.255.255",
+                () -> assertEquals(1, deny.size()),
+                () -> assertEquals(0, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("0.0.0.0"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("0.0.0.0"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("255.255.255.255"), deny.firstEntry().getValue().getEndIpLong()));
+    }
+
+    @Test
+    void test_setDeny_set_valid_if_ip_is_start() {
+        String denyRule = "0.0.0.1/24"; // 0.0.0.0 ~ 0.0.0.255
+        ipFilterConfiguration.setDeny(Collections.singletonList(denyRule));
+        TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
+        assertAll("test if deny rule is 0.0.0.0/24 then denyIPs must be 0.0.0.0 ~ 0.0.0.255",
+                () -> assertEquals(1, deny.size()),
+                () -> assertEquals(24, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("0.0.0.1"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("0.0.0.0"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("0.0.0.255"), deny.firstEntry().getValue().getEndIpLong()));
+    }
+
+    @Test
+    void test_setDeny_set_valid_if_ip_is_end() {
+        String denyRule = "255.255.255.255/24"; // 255.255.255.0 ~ 0.0.0.255
+        ipFilterConfiguration.setDeny(Collections.singletonList(denyRule));
+        TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
+        assertAll("test if deny rule is 255.255.255.255/24 then denyIPs must be 255.255.255.0 ~ 255.255.255.255",
+                () -> assertEquals(1, deny.size()),
+                () -> assertEquals(24, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("255.255.255.255"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("255.255.255.0"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("255.255.255.255"), deny.firstEntry().getValue().getEndIpLong()));
     }
 
     @Test
@@ -80,9 +119,10 @@ public class IpFilterConfigurationTest {
         TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
         assertAll("test if deny rule is 10.10.255.11/32, then denyIP must be 10.10.255.11 only",
                 () -> assertEquals(1, deny.size()),
-                () -> assertEquals("10.10.255.11/32", deny.firstEntry().getValue().getSubnet().getInfo().getCidrSignature()),
-                () -> assertEquals("10.10.255.11", deny.firstEntry().getValue().getSubnet().getInfo().getLowAddress()),
-                () -> assertEquals("10.10.255.11", deny.firstEntry().getValue().getSubnet().getInfo().getHighAddress()));
+                () -> assertEquals(32, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("10.10.255.11"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.10.255.11"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.10.255.11"), deny.firstEntry().getValue().getEndIpLong()));
     }
 
     @Test
@@ -92,9 +132,10 @@ public class IpFilterConfigurationTest {
         TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
         assertAll("test if deny rules are nested (with same cidr), then aggregate",
                 () -> assertEquals(1, deny.size()),
-                () -> assertEquals("10.0.0.0/24", deny.firstEntry().getValue().getSubnet().getInfo().getCidrSignature()),
-                () -> assertEquals("10.0.0.0", deny.firstEntry().getValue().getSubnet().getInfo().getLowAddress()),
-                () -> assertEquals("10.0.0.255", deny.firstEntry().getValue().getSubnet().getInfo().getHighAddress()));
+                () -> assertEquals(24, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.100"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.0"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.255"), deny.firstEntry().getValue().getEndIpLong()));
     }
 
     @Test
@@ -104,9 +145,10 @@ public class IpFilterConfigurationTest {
         TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
         assertAll("test if deny rules are nested, then aggregate (even if different mask)",
                 () -> assertEquals(1, deny.size()),
-                () -> assertEquals("10.0.0.0/24", deny.firstEntry().getValue().getSubnet().getInfo().getCidrSignature()),
-                () -> assertEquals("10.0.0.0", deny.firstEntry().getValue().getSubnet().getInfo().getLowAddress()),
-                () -> assertEquals("10.0.0.255", deny.firstEntry().getValue().getSubnet().getInfo().getHighAddress()));
+                () -> assertEquals(24, deny.firstEntry().getValue().getCidr()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.100"), deny.firstEntry().getValue().getIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.0"), deny.firstEntry().getValue().getStartIpLong()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.255"), deny.firstEntry().getValue().getEndIpLong()));
     }
 
     @Test
@@ -124,17 +166,18 @@ public class IpFilterConfigurationTest {
         Map<Long, Ipv4Subnet> expect = new HashMap<>();
         for (String expectDenyRange : expectDenyRanges) {
             Ipv4Subnet subnet = new Ipv4Subnet(expectDenyRange);
-            expect.put(subnet.getIpLong(), subnet);
+            expect.put(subnet.getStartIpLong(), subnet);
         }
 
         // then
         Stream<Executable> executables = expect.keySet().stream()
                 .map(expect::get)
                 .map(expectValues -> () -> assertAll(
-                        String.format("test range start with %s", expectValues.getSubnet().getInfo().getAddress()),
-                        () -> assertNotNull(deny.get(expectValues.getIpLong())),
-                        () -> assertEquals(expectValues.getSubnet().getInfo().getCidrSignature(), deny.get(expectValues.getIpLong()).getSubnet().getInfo().getCidrSignature()),
-                        () -> assertEquals(expectValues.getSubnet().getInfo().getNetmask(), deny.get(expectValues.getIpLong()).getSubnet().getInfo().getNetmask())
+                        String.format("test range start with %s", expectValues.getIpLong()),
+                        () -> assertNotNull(deny.get(expectValues.getStartIpLong())),
+                        () -> assertEquals(expectValues.getCidr(), deny.get(expectValues.getStartIpLong()).getCidr()),
+                        () -> assertEquals(expectValues.getStartIpLong(), deny.get(expectValues.getStartIpLong()).getStartIpLong()),
+                        () -> assertEquals(expectValues.getEndIpLong(), deny.get(expectValues.getStartIpLong()).getEndIpLong())
                 ));
         assertAll("test if deny rules are nested, then aggregate (even if different mask)",
                 () -> assertEquals(3, deny.size()),
