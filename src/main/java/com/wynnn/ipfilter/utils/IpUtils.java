@@ -1,18 +1,14 @@
 package com.wynnn.ipfilter.utils;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.net.util.SubnetUtils;
 
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Slf4j
 public class IpUtils {
 
-    private static final Pattern IP_PATTERN = Pattern.compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
-    private static final Pattern CIDR_PATTERN = Pattern.compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])/(\\d{1,3})$");
-    private static final String SUBNET_32BIT = "255.255.255.255";
+    public static final Pattern IP_PATTERN = Pattern.compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])$");
+    public static final Pattern CIDR_PATTERN = Pattern.compile("^(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])(/([0-9]|[1-2][0-9]|3[0-2]))?$");
 
     public static boolean isValidIpFormat(String ipAddress) {
         return IP_PATTERN.matcher(ipAddress).matches();
@@ -30,19 +26,23 @@ public class IpUtils {
         return result;
     }
 
-    public static Optional<SubnetUtils> convert(String ipAddress) throws IllegalArgumentException {
-        return convert(ipAddress, null);
+    public static long calcStartIpInSubnet(long ipLong, int cidr) {
+        if (cidr == 0) {
+            return 0;
+        }
+        if (cidr == 32) {
+            return ipLong;
+        }
+        return ipLong & (-1 << (32 - cidr));
     }
 
-    public static Optional<SubnetUtils> convert(String ipAddress, String netmask) throws IllegalArgumentException {
-        return Optional.of(ipAddress)
-                .filter(StringUtils::isNoneBlank)
-                .map(ip -> CIDR_PATTERN.matcher(ipAddress).matches()
-                        ? new SubnetUtils(ipAddress)
-                        : new SubnetUtils(ipAddress, (netmask != null ? netmask : SUBNET_32BIT)))
-                .map(subnet -> {
-                    subnet.setInclusiveHostCount(true);
-                    return subnet;
-                });
+    public static long calcEndIpInSubnet(long ipLong, int cidr) {
+        if (cidr == 0) {
+            return 0xffffffffL;
+        }
+        if (cidr == 32) {
+            return ipLong;
+        }
+        return ipLong | ((1 << (32 - cidr)) - 1);
     }
 }
