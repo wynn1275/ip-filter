@@ -1,7 +1,6 @@
 package com.wynnn.ipfilter.config;
 
 import com.wynnn.ipfilter.model.Ipv4Subnet;
-import com.wynnn.ipfilter.utils.IpUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -10,7 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 @Configuration
@@ -26,7 +24,7 @@ public class IpFilterConfiguration {
                 .filter(denies -> denies.size() > 0)
                 .map(this::parseNestedSubnet)
                 .orElse(new TreeMap<>());
-        log.debug("> completed to set deny={}", this.deny);
+        log.info("> completed to set deny={}", this.deny.size());
     }
 
     private TreeMap<Long, Ipv4Subnet> parseNestedSubnet(List<String> denyIps) {
@@ -34,19 +32,20 @@ public class IpFilterConfiguration {
         for (String denyIp : denyIps) {
             try {
                 Ipv4Subnet subnet = new Ipv4Subnet(denyIp);
-                Map.Entry<Long, Ipv4Subnet> floorEntry = denyRules.floorEntry(subnet.getIpLong());
+                Map.Entry<Long, Ipv4Subnet> floorEntry = denyRules.floorEntry(subnet.getStartIpLong());
                 if (floorEntry == null) {
-                    denyRules.put(subnet.getIpLong(), subnet);
+                    denyRules.put(subnet.getStartIpLong(), subnet);
                 } else if (floorEntry.getValue().isNestedSubnet(subnet)) { // if new subnet is nested then skip
                     continue;
                 } else {
-                    SortedMap<Long, Ipv4Subnet> nested = denyRules.subMap(subnet.getIpLong(), true,
-                            IpUtils.ipToLong(subnet.getSubnet().getInfo().getHighAddress()), true);
-                    nested.keySet().forEach(denyRules::remove);
-                    denyRules.put(subnet.getIpLong(), subnet);
+                    if (floorEntry.getKey() == subnet.getStartIpLong()) {
+                        denyRules.replace(subnet.getStartIpLong(), subnet);
+                    } else {
+                        denyRules.put(subnet.getStartIpLong(), subnet);
+                    }
                 }
             } catch (Exception e) {
-                log.info("> cannot parse IP because invalid format, IP={}", denyIp, e);
+                log.info("> exception when parse IP={}", denyIp, e);
             }
         }
         return denyRules;
