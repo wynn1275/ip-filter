@@ -1,5 +1,6 @@
 package com.wynnn.ipfilter.config;
 
+import com.wynnn.ipfilter.common.TestUtil;
 import com.wynnn.ipfilter.model.Ipv4Subnet;
 import com.wynnn.ipfilter.utils.IpUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,14 @@ public class IpFilterConfigurationTest {
 
         ipFilterConfiguration = binder.bind("ip-filter", IpFilterConfiguration.class).get();
     }
+
+    @Test
+    void test_setDeny_load() {
+        ipFilterConfiguration.setDeny(Arrays.asList(TestUtil.TEST_FILTER_DENY_LIST));
+        log.debug("> denyRules={}", ipFilterConfiguration.getDeny());
+        assertEquals(6, ipFilterConfiguration.getDeny().size());
+    }
+
 
     @Test
     void test_setDeny_if_invalidSubnet_then_skip() {

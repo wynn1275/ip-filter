@@ -13,7 +13,12 @@ import java.util.TreeMap;
 public class TestUtil {
 
     public static final String[] TEST_FILTER_DENY_LIST = {
+            "10.0.10.25/24",
+            "10.0.0.27/16",
+            "10.100.0.25/24",
             "10.0.0.0/8",
+            "10.0.1.2/24",
+            "10.244.1.2/24",
             "172.16.0.0/12",
             "192.168.0.0/16",
             "1.1.1.1",
@@ -90,13 +95,14 @@ public class TestUtil {
 
     /**
      * dummy subnet pool
-     * @return  key=ip subnet string with cidr notation
-     *          value=subnet info
-     *          value[0]=ip address (long)
-     *          value[1]=ip address string without cidr notation
-     *          value[2]=cidr (number of bit)
-     *          value[3]=start ip (long)
-     *          value[4]=end ip (long)
+     *
+     * @return key=ip subnet string with cidr notation
+     * value=subnet info
+     * value[0]=ip address (long)
+     * value[1]=ip address string without cidr notation
+     * value[2]=cidr (number of bit)
+     * value[3]=start ip (long)
+     * value[4]=end ip (long)
      */
     public static Map<String, String[]> createDummySubnetPool() {
         Map<String, String[]> returnVal = new HashMap<>();
