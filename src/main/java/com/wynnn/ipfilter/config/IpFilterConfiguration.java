@@ -6,9 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 @Configuration
@@ -38,6 +41,11 @@ public class IpFilterConfiguration {
                 } else if (floorEntry.getValue().isNestedSubnet(subnet)) { // if new subnet is nested then skip
                     continue;
                 } else {
+                    // remove nested subnet
+                    new HashSet<>(Optional.ofNullable(denyRules.subMap(subnet.getStartIpLong(), false, subnet.getEndIpLong(), true))
+                            .map(SortedMap::keySet)
+                            .orElse(Collections.emptySet()))
+                            .forEach(denyRules::remove);
                     if (floorEntry.getKey() == subnet.getStartIpLong()) {
                         denyRules.replace(subnet.getStartIpLong(), subnet);
                     } else {
