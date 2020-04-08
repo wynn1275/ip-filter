@@ -45,4 +45,12 @@ class IpUtilsTest {
             assertEquals(Long.parseLong(entry.getValue()[4]), IpUtils.calcEndIpInSubnet(Long.parseLong(entry.getValue()[0]), Integer.parseInt(entry.getValue()[2])));
         }
     }
+
+    @Test
+    void test_calcNumSubnet() {
+        assertEquals(4294967296L, IpUtils.NUM_SUBNET[0]);
+        assertEquals(2147483648L, IpUtils.NUM_SUBNET[1]);
+        assertEquals(256L, IpUtils.NUM_SUBNET[24]);
+        assertEquals(1, IpUtils.NUM_SUBNET[32]);
+    }
 }

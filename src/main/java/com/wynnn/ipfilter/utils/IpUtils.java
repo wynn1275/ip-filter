@@ -14,6 +14,17 @@ public class IpUtils {
         return IP_PATTERN.matcher(ipAddress).matches();
     }
 
+    public static final long[] NUM_SUBNET = initNumSubnet();
+
+    private static long[] initNumSubnet() {
+        long[] numSubnet = new long[33];
+        numSubnet[32] = 1;
+        for (int i = 31; i >= 0; i--) {
+            numSubnet[i] = 2 * numSubnet[i + 1];
+        }
+        return numSubnet;
+    }
+
     public static long ipToLong(String ipAddress) {
         long result = 0;
 
