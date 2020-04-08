@@ -127,4 +127,4 @@ java -jar ip-filter-0.0.1-SNAPSHOT.jar
 ```
 
 ## 성능테스트 결과
-(추가)
+* [https://github.com/wynn1275/ip-filter-performace-docs/blob/master/README.md](https://github.com/wynn1275/ip-filter-performace-docs/blob/master/README.md)
