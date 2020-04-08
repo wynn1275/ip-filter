@@ -73,11 +73,11 @@ ip-filter.deny:
 ```
 2. 읽어들인 차단 IP List 를 순회하며 Subnet 정보로 변환 및 TreeMap 에 저장
   1) CIDR 표기법을 포함한 IP 주소를 읽어와, 해당 IP의 subnet 정보가 담긴 Object 로 변환
-    - ex. (String) "245.59.153.210/9" -> (Object) {"시작 IP":4110417920L(245.0.0.0), "마지막 IP"=4118806527L(245.127.255.255), "CIDR bit"=9, "IP 주소"=4114323922L(245.59.153.210)}
+     - ex. (String) "245.59.153.210/9" -> (Object) {"시작 IP":4110417920L(245.0.0.0), "마지막 IP"=4118806527L(245.127.255.255), "CIDR bit"=9, "IP 주소"=4114323922L(245.59.153.210)}
   2) TreeMap 에 subnet 정보를 저장
-    - key=해당 subnet 의 시작 IP(long), value=subnet 정보
-    - TreeMap 에 동일한 key 가 존재하는 경우, 중첩된(nested) subnet 으로 판단하고 더 큰 범위의 subnet 정보로 replace
-    - TreeMap 에 저장된 IP 개수가 MAX (3000만 개) 를 넘는 경우 더 이상 저장하지 않고 application start 함. load 를 중지한 차단 IP List 의 시점은 로그로 기록
+     - key=해당 subnet 의 시작 IP(long), value=subnet 정보
+     - TreeMap 에 동일한 key 가 존재하는 경우, 중첩된(nested) subnet 으로 판단하고 더 큰 범위의 subnet 정보로 replace
+     - TreeMap 에 저장된 IP 개수가 MAX (3000만 개) 를 넘는 경우 더 이상 저장하지 않고 application start 함. load 를 중지한 차단 IP List 의 시점은 로그로 기록
 #### properties file load 예시
 ```text
 * properties 파일에 다음과 같은 순서로 차단 IP 가 저장되어있는 경우
