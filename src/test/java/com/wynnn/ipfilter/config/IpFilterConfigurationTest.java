@@ -23,7 +23,9 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @Slf4j
 public class IpFilterConfigurationTest {
@@ -191,5 +193,15 @@ public class IpFilterConfigurationTest {
         assertAll("test if deny rules are nested, then aggregate (even if different mask)",
                 () -> assertEquals(3, deny.size()),
                 () -> assertAll(executables));
+    }
+
+    @Test
+    void test_setDeny_if_exceed_max_count_then_stop_to_set() {
+        String[] denyRules = {"10.0.0.0/8", "11.0.0.0/8", "12.0.0.0/8", "13.0.0.0/8"};
+        ipFilterConfiguration.setDeny(Arrays.asList(denyRules));
+        TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
+        assertAll("test if exceed max count of deny IPs (30 million) then stop to set",
+                () -> assertEquals(2, deny.size()),
+                () -> assertEquals(IpUtils.ipToLong("11.0.0.0"), deny.lastEntry().getKey()));
     }
 }

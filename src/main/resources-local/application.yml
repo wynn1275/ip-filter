@@ -1,7 +1,6 @@
 spring:
   profiles:
     active: local
----
 ip-filter:
   deny:
     - 10.0.0.0/8
