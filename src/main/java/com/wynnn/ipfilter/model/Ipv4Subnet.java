@@ -15,6 +15,11 @@ public class Ipv4Subnet implements Comparable<Ipv4Subnet> {
     private long ipLong;
     private int cidr;
 
+    /**
+     * CIDR 표기법을 포함한 IP 주소를 읽어와, 해당 IP의 subnet 정보가 담긴 Ipv4Subnet 으로 변환. CIDR 표기법이 아닌 경우 /32 로 인식
+     * @param ipAddress IP address with CIDR notation
+     * @throws IllegalArgumentException IP 주소 형식이 아닌 경우 exception 발생
+     */
     public Ipv4Subnet(String ipAddress) throws IllegalArgumentException {
         if (StringUtils.isBlank(ipAddress)) {
             throw new IllegalArgumentException(String.format("Cannot parse IP=%s because blank", ipAddress));
