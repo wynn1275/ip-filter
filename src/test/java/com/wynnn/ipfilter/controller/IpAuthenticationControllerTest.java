@@ -115,7 +115,7 @@ class IpAuthenticationControllerTest {
 
         mockMvc.perform(MockMvcRequestBuilders.get("/ipv4").header("X-Forwarded-For", IP_CLIENT_1))
                 .andDo(print())
-                .andExpect(status().is(HttpStatus.OK.value()))
+                .andExpect(status().is(HttpStatus.FORBIDDEN.value()))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(jsonPath("$.resultMessage").value("Deny"))
                 .andExpect(jsonPath("$.clientIp").value(IP_CLIENT_1));
