@@ -204,4 +204,15 @@ public class IpFilterConfigurationTest {
                 () -> assertEquals(2, deny.size()),
                 () -> assertEquals(IpUtils.ipToLong("11.0.0.0"), deny.lastEntry().getKey()));
     }
+
+    @Test
+    void test_setDeny_if_nested() {
+        String[] denyRules = {"10.0.0.1/32", "10.0.0.2/32", "10.0.0.3/32", "10.0.0.4/8"};
+        ipFilterConfiguration.setDeny(Arrays.asList(denyRules));
+        TreeMap<Long, Ipv4Subnet> deny = ipFilterConfiguration.getDeny();
+        log.debug(">>>>>>>>> {}", deny);
+        assertAll("test if exceed max count of deny IPs (30 million) then stop to set",
+                () -> assertEquals(1, deny.size()),
+                () -> assertEquals(IpUtils.ipToLong("10.0.0.0"), deny.lastEntry().getKey()));
+    }
 }

@@ -7,13 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Configuration
@@ -30,54 +28,47 @@ public class IpFilterConfiguration {
         numDenyIps.set(0);
         this.deny = Optional.ofNullable(deny)
                 .filter(denies -> denies.size() > 0)
-                .map(this::parseNestedSubnet)
+                .map(this::parseSubnet)
+                .map(this::removeNestedSubnet)
                 .orElse(new TreeMap<>());
         log.info("> completed to set deny={}", numDenyIps);
     }
 
     /**
-     * 차단 IP List 를 TreeMap 으로 변환하여 저장
-     * TreeMap 에 중첩된 subnet 이 포함된 경우, 중첩을 제거함
+     * properties 에서 subnet 을 읽어와 Ipv4Subnet 으로 변환 및 정렬 (subnet 의 시작Ip 가 빠른 순서 및 CIDR 가 큰 순서)
+     *
      * @param denyIps properties 파일에 등록된 차단 IP 목록
-     * @return 차단하는 IP 의 subnet 정보가 담긴 TreeMap
+     * @return 변환 및 정렬된 subnet 정보
      */
-    private TreeMap<Long, Ipv4Subnet> parseNestedSubnet(List<String> denyIps) {
-        TreeMap<Long, Ipv4Subnet> denyRules = new TreeMap<>();
+    private TreeSet<Ipv4Subnet> parseSubnet(List<String> denyIps) {
+        TreeSet<Ipv4Subnet> subnets = new TreeSet<>();
         for (String denyIp : denyIps) {
-            if (numDenyIps.get() > MAX_NUM_DENY_IP) { // MAX_NUM_DENY_IP 가 초과한 경우 더 이상 저장하지 않고 현재 TreeMap 을 return. properties 에 등록된 차단 IP 목록이 모두 저장되지 않은 경우이므로, warn log 로 저장하지 않은 시점 (현재 IP 주소)을 기록
-                log.warn("> exceed max number of deny IPs (current number of applied IP is={}) : The deny applied only until the previous rule of this={}. {} not applied.",
-                        numDenyIps.get(), denyIp, denyIp);
-                break;
-            }
             try {
-                Ipv4Subnet subnet = new Ipv4Subnet(denyIp); // CIDR 표기법을 포함한 IP 주소를 읽어와, 해당 IP의 subnet 정보가 담긴 Ipv4Subnet 객체로 변환. CIDR 표기법이 아닌 경우 /32 로 인식
-                Map.Entry<Long, Ipv4Subnet> floorEntry = denyRules.floorEntry(subnet.getStartIpLong());
-                if (floorEntry == null) { // 첫 번째 subnet 정보인 경우
-                    numDenyIps.addAndGet(IpUtils.NUM_SUBNET[subnet.getCidr()]);
-                    denyRules.put(subnet.getStartIpLong(), subnet);
-                } else if (floorEntry.getValue().isNestedSubnet(subnet)) { // if new subnet is nested then skip
-                    continue;
-                } else {
-                    // remove nested subnet
-                    new HashSet<>(Optional.ofNullable(denyRules.subMap(subnet.getStartIpLong(), false, subnet.getEndIpLong(), true)) // TreeMap 에서 현재 subnet 에 중첩되는 모든 subnet 정보를 찾아 삭제
-                            .map(SortedMap::entrySet)
-                            .orElse(Collections.emptySet()))
-                            .forEach(nested -> {
-                                numDenyIps.addAndGet(-IpUtils.NUM_SUBNET[nested.getValue().getCidr()]);
-                                denyRules.remove(nested.getKey());
-                            });
-                    if (floorEntry.getKey() == subnet.getStartIpLong()) {
-                        // startIP 가 동일한 경우 subnet 정보를 replace
-                        numDenyIps.addAndGet(IpUtils.NUM_SUBNET[subnet.getCidr()] - IpUtils.NUM_SUBNET[floorEntry.getValue().getCidr()]);
-                        denyRules.replace(subnet.getStartIpLong(), subnet);
-                    } else {
-                        // 새로운 subnet 정보인 경우 TreeMap 에 저장
-                        numDenyIps.addAndGet(IpUtils.NUM_SUBNET[subnet.getCidr()]);
-                        denyRules.put(subnet.getStartIpLong(), subnet);
-                    }
-                }
+                subnets.add(new Ipv4Subnet(denyIp));
             } catch (Exception e) {
                 log.info("> exception when parse IP={}", denyIp, e);
+            }
+        }
+        return subnets;
+    }
+
+    /**
+     * 중첩된 subnet 을 제거
+     *
+     * @param subnets 정렬된 subnet 정보
+     * @return 중첩이 제거된 subnet 정보
+     */
+    private TreeMap<Long, Ipv4Subnet> removeNestedSubnet(TreeSet<Ipv4Subnet> subnets) {
+        TreeMap<Long, Ipv4Subnet> denyRules = new TreeMap<>();
+        for (Ipv4Subnet subnet : subnets) {
+            if (numDenyIps.get() > MAX_NUM_DENY_IP) { // MAX_NUM_DENY_IP 가 초과한 경우 더 이상 저장하지 않고 현재 TreeMap 을 return. 단, sorting 된 이후이므로 properties 파일에 기록된 순서가 아니니 주의
+                log.warn("> exceed max number of deny IPs : The deny applied only until the previous rule of this={}. not applied {}.", numDenyIps.get(), subnet);
+                break;
+            }
+            Map.Entry<Long, Ipv4Subnet> floorEntry = denyRules.floorEntry(subnet.getIpLong());
+            if (floorEntry == null || !floorEntry.getValue().isNestedSubnet(subnet)) {
+                numDenyIps.addAndGet(IpUtils.NUM_SUBNET[subnet.getCidr()]);
+                denyRules.put(subnet.getStartIpLong(), subnet);
             }
         }
         return denyRules;
